@@ -45,6 +45,18 @@ data <- data * mask # exclude gridcells that both data sets do not have in commo
 rsds <- data / 86400 # Convert unit from J m-2 day-1 to W m-2 
 rm(data)
 
+data <- terra::rast("C:/Users/Charlotte/Desktop/RStudio/ERA5_wind_fix.nc")
+crs(data) <- "EPSG:4326" # assign a map projection (WGS84)
+data <- data * mask # exclude gridcells that both data sets do not have in common
+wind <- data
+rm(data)
+
+data <- terra::rast("C:/Users/Charlotte/Desktop/RStudio/ERA5_VSM_fix.nc")
+crs(data) <- "EPSG:4326" # assign a map projection (WGS84)
+data <- data * mask # exclude gridcells that both data sets do not have in common
+vsm <- data
+rm(data)
+
 data <- pr
 # Create a sequence of dates
 start_date <- as.Date("2001-01-01")
@@ -123,6 +135,29 @@ data.anom.detrend <- app(x = data.anom, fun = detrend.fun)
 gfed.anom.detrend <- data.anom.detrend
 my.col <- rev(map.pal("magma", n = 100))
 plot(subset(gfed.anom.detrend, 1), col = my.col, main = "gfed")
+
+granger.fun <- function(x) {
+  
+  # If a grid cell contains NA, then set the result to NA
+  if (is.na(mean(x))) {
+    return(NA)
+  } else {
+    
+    n <- length(x)
+    # Get first (a) and second (b) variable
+    a <- x[1:(n/2)]
+    b <- x[(n/2+1):n]
+    # Convert to time series
+    a <- ts(a)
+    b <- ts(b)
+    tsDat <- ts.union(a, b)
+    tsVAR <- vars::VAR(tsDat, p = 2)
+    # Apply Granger causality test 
+    p.value <- c(vars::causality(tsVAR, cause = "a")$Granger[3]$p.value)
+    return(p.value)
+  }
+}
+
 
 
 granger.fun.2 <- function(x) {
