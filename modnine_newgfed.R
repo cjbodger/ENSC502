@@ -29,12 +29,11 @@ data <- data * mask # exclude gridcells that both data sets do not have in commo
 tas <- data
 rm(data)
 
-# Surface Downwelling
-data <- terra::rast("C:/Users/Charlotte/Desktop/RStudio/ERA5_rsds_fix.nc")
+# Relative Humidity
+data <- terra::rast("C:/Users/Charlotte/Desktop/RStudio/ERA5_rh.nc")
 crs(data) <- "EPSG:4326" # assign a map projection (WGS84)
 data <- data * mask # exclude gridcells that both data sets do not have in common
-rsds <- data / 86400 # Convert unit from J m-2 day-1 to W m-2 
-rm(data)
+rh <- data
 
 # Wind Speed @ 10m
 data <- terra::rast("C:/Users/Charlotte/Desktop/RStudio/ERA5_wind_fix.nc")
@@ -50,12 +49,6 @@ data <- data * mask # exclude gridcells that both data sets do not have in commo
 vsm <- data
 rm(data)
 
-# Leaf Area Index
-data <- terra::rast("C:/Users/Charlotte/Desktop/RStudio/ERA5_lai_fix.nc")
-crs(data) <- "EPSG:4326" # assign a map projection (WGS84)
-data <- data * mask # exclude gridcells that both data sets do not have in common
-lai <- data
-rm(data)
 
 data <- pr
 # Create a sequence of dates
@@ -113,16 +106,16 @@ tas.anom.detrend <- data.anom.detrend
 my.col <- rev(map.pal("magma", n = 100))
 plot(subset(tas.anom.detrend, 1:1), col = my.col, main = "tas")
 
-# Repetition for DSR
-data <- rsds
+# Repetition for RH
+data <- rh
 data.ts <- rts(data, dates)
 data.12 <- apply.months(data.ts, 'mean')
 data.clim <- rep(data.12, n)
 data.anom <- data - data.clim
 data.anom.detrend <- app(x = data.anom, fun = detrend.fun)
-rsds.anom.detrend <- data.anom.detrend
+rh.anom.detrend <- data.anom.detrend
 my.col <- rev(map.pal("magma", n = 100))
-plot(subset(rsds.anom.detrend, 1:1), col = my.col, main = "rsds")
+plot(subset(rh.anom.detrend, 1:1), col = my.col, main = "RH")
 
 
 # Repetition for GFED
@@ -248,14 +241,14 @@ p.value.tas <- p.value
 plot(p.value, col = c("white", "red"), main = "Temperature Granger-causes Burned Area Anomalies")
 map("world2", add = TRUE, interior = FALSE)
 
-# RSDS GC GFED
-data <- c(rsds.anom.detrend, gfed.anom.detrend)
+# RH GC GFED
+data <- c(rh.anom.detrend, gfed.anom.detrend)
 p.value <- app(x = data, fun = granger.fun.2)
 
 p.value[p.value >= 0.05] <- 0
 p.value[p.value > 0] <- 1
-p.value.rsds <- p.value
-plot(p.value, col = c("white", "cyan"), main = "Downwelling Granger-causes Burned Area Anomalies")
+p.value.rh <- p.value
+plot(p.value, col = c("white", "cyan"), main = "Relative Humidity Granger-causes Burned Area Anomalies")
 map("world2", add = TRUE, interior = FALSE)
 
 # Wind GC GFED
@@ -278,19 +271,10 @@ p.value.vsm <- p.value
 plot(p.value, col = c("white", "pink"), main = "VSM Granger-causes Burned Area Anomalies")
 map("world2", add = TRUE, interior = FALSE)
 
-# LAI GC GFED
-data <- c(lai.anom.detrend, gfed.anom.detrend)
-p.value <- app(x = data, fun = granger.fun.2)
-
-p.value[p.value >= 0.05] <- 0
-p.value[p.value > 0] <- 1
-p.value.lai <- p.value
-plot(p.value, col = c("white", "green"), main = "LAI Granger-causes Burned Area Anomalies")
-map("world2", add = TRUE, interior = FALSE)
 
 # Summarizing
-p.value <- p.value.pr + p.value.tas + p.value.rsds + p.value.wind + p.value.vsm + p.value.lai
-plot(p.value, main = "PR, TAS, RSDS, WS, VSM and LAI Granger-causes Burned Area Anomalies")
+p.value <- p.value.pr + p.value.tas + p.value.rh + p.value.wind + p.value.vsm
+plot(p.value, main = "PR, TAS, RH, WS, VSM Granger-causes Burned Area Anomalies")
 map("world2", add = TRUE, interior = FALSE)
 
 # Cross Correlation
@@ -306,38 +290,35 @@ points(location, col = "red", pch = 16, cex = 1.0)
 gfed.anom.detrend.gc <- extract(gfed.anom.detrend, location)
 pr.anom.detrend.gc <- extract(pr.anom.detrend, location)
 tas.anom.detrend.gc <- extract(tas.anom.detrend, location)
-rsds.anom.detrend.gc <- extract(rsds.anom.detrend, location)
+rh.anom.detrend.gc <- extract(rh.anom.detrend, location)
 wind.anom.detrend.gc <- extract(wind.anom.detrend, location)
 vsm.anom.detrend.gc <- extract(vsm.anom.detrend, location)
-lai.anom.detrend.gc <- extract(lai.anom.detrend, location)
 
 gfed.anom.detrend.gc <- unlist(unname(as.vector(gfed.anom.detrend.gc)))
 pr.anom.detrend.gc <- unlist(unname(as.vector(pr.anom.detrend.gc)))
 tas.anom.detrend.gc <- unlist(unname(as.vector(tas.anom.detrend.gc)))
-rsds.anom.detrend.gc <- unlist(unname(as.vector(rsds.anom.detrend.gc)))
+rh.anom.detrend.gc <- unlist(unname(as.vector(rh.anom.detrend.gc)))
 wind.anom.detrend.gc <- unlist(unname(as.vector(wind.anom.detrend.gc)))
 vsm.anom.detrend.gc <- unlist(unname(as.vector(vsm.anom.detrend.gc)))
-lai.anom.detrend.gc <- unlist(unname(as.vector(lai.anom.detrend.gc)))
+
 
 n <- length(gfed.anom.detrend.gc)
 gfed.anom.detrend.gc <- gfed.anom.detrend.gc[2:n]
 pr.anom.detrend.gc <- pr.anom.detrend.gc[2:n]
 tas.anom.detrend.gc <- tas.anom.detrend.gc[2:n]
-rsds.anom.detrend.gc <- rsds.anom.detrend.gc[2:n]
+rh.anom.detrend.gc <- rh.anom.detrend.gc[2:n]
 wind.anom.detrend.gc <- wind.anom.detrend.gc[2:n]
 vsm.anom.detrend.gc <- vsm.anom.detrend.gc[2:n]
-lai.anom.detrend.gc <- lai.anom.detrend.gc[2:n]
 
 
 gfed.ts <- ts(gfed.anom.detrend.gc)
 pr.ts <- ts(pr.anom.detrend.gc)
 tas.ts <- ts(tas.anom.detrend.gc)
-rsds.ts <- ts(rsds.anom.detrend.gc)
+rh.ts <- ts(rh.anom.detrend.gc)
 wind.ts <- ts(wind.anom.detrend.gc)
 vsm.ts <- ts(vsm.anom.detrend.gc)
-lai.ts <- ts(lai.anom.detrend.gc)
 
-tsDat <- ts.union(gfed.ts, pr.ts, tas.ts, rsds.ts, wind.ts, vsm.ts, lai.ts)
+tsDat <- ts.union(gfed.ts, pr.ts, tas.ts, rh.ts, wind.ts, vsm.ts)
 
 # Time Series Graph
 plot(tsDat)
@@ -347,13 +328,11 @@ ccf_result <- ccf(gfed.ts, pr.ts, lag.max = 12, plot = FALSE)
 plot(ccf_result)
 ccf_result <- ccf(gfed.ts, tas.ts, lag.max = 12, plot = FALSE)
 plot(ccf_result)
-ccf_result <- ccf(gfed.ts, rsds.ts, lag.max = 12, plot = FALSE)
+ccf_result <- ccf(gfed.ts, rh.ts, lag.max = 12, plot = FALSE)
 plot(ccf_result)
 ccf_result <- ccf(gfed.ts, wind.ts, lag.max = 12, plot = FALSE)
 plot(ccf_result)
 ccf_result <- ccf(gfed.ts, vsm.ts, lag.max = 12, plot = FALSE)
-plot(ccf_result)
-ccf_result <- ccf(gfed.ts, lai.ts, lag.max = 12, plot = FALSE)
 plot(ccf_result)
 
 # Index of maximum correlation
@@ -506,12 +485,12 @@ plot(
 map("world2", add = TRUE, interior = FALSE)
 points(location, pch = 1, cex = 1.0)
 
-# Repeat for RSDS
-data <- c(gfed.anom.detrend, rsds.anom.detrend)
+# Repeat for RH
+data <- c(gfed.anom.detrend, rh.anom.detrend)
 timeLags <- app(x = data, fun = findLag.fun)
-timeLags.rsds <- timeLags
+timeLags.rh <- timeLags
 maxCorr <- app(x = data, fun = findMaxCorr.fun)
-maxCorr.rsds <- maxCorr
+maxCorr.rh <- maxCorr
 
 par(mfrow = c(1, 2))
 
@@ -520,8 +499,8 @@ breaks <- seq(-12, 12, 1)
 my.col <- rev(map.pal("differences", n = length(breaks) - 1))
 
 plot(
-  timeLags.rsds,
-  main = "Monthly time lags with largest correlation coefficient \n (RSDS and GFED)",
+  timeLags.rh,
+  main = "Monthly time lags with largest correlation coefficient \n (RH and GFED)",
   cex.main = 0.7,
   col = my.col,
   breaks = breaks,
@@ -535,8 +514,8 @@ breaks <- seq(-1, 1, 0.1)
 my.col <- rev(map.pal("differences", n = length(breaks) - 1))
 
 plot(
-  maxCorr.rsds,
-  main = "Corresponding Correlation coefficient \n (RSDS and GFED)",
+  maxCorr.rh,
+  main = "Corresponding Correlation coefficient \n (RH and GFED)",
   cex.main = 0.7,
   col = my.col,
   breaks = breaks,
@@ -623,64 +602,34 @@ plot(
 map("world2", add = TRUE, interior = FALSE)
 points(location, pch = 1, cex = 1.0)
 
-# Repeat for LAI
-data <- c(gfed.anom.detrend, lai.anom.detrend)
-timeLags <- app(x = data, fun = findLag.fun)
-timeLags.lai <- timeLags
-maxCorr <- app(x = data, fun = findMaxCorr.fun)
-maxCorr.lai <- maxCorr
-
-par(mfrow = c(1, 2))
-
-# Plot time lags
-breaks <- seq(-12, 12, 1)
-my.col <- rev(map.pal("differences", n = length(breaks) - 1))
-
-plot(
-  timeLags.lai,
-  main = "Monthly time lags with largest correlation coefficient \n (LAI and GFED)",
-  cex.main = 0.7,
-  col = my.col,
-  breaks = breaks,
-  type = "continuous"
-)
-map("world2", add = TRUE, interior = FALSE)
-points(location, pch = 1, cex = 1.0)
-
-# Plot Correlation Coefficients
-breaks <- seq(-1, 1, 0.1)
-my.col <- rev(map.pal("differences", n = length(breaks) - 1))
-
-plot(
-  maxCorr.lai,
-  main = "Corresponding Correlation coefficient \n (LAI and GFED)",
-  cex.main = 0.7,
-  col = my.col,
-  breaks = breaks,
-  type = "continuous"
-)
-map("world2", add = TRUE, interior = FALSE)
-points(location, pch = 1, cex = 1.0)
-
-
 # Combining GC test and cross correlation
 maxR2.pr <- maxCorr.pr^2 * p.value.pr
 maxR2.tas <- maxCorr.tas^2 * p.value.tas
-maxR2.rsds <- maxCorr.rsds^2 * p.value.rsds
+maxR2.rh <- maxCorr.rh^2 * p.value.rh
 maxR2.wind <- maxCorr.wind^2 * p.value.wind
 maxR2.vsm <- maxCorr.vsm^2 * p.value.vsm
-maxR2.lai <- maxCorr.lai^2 * p.value.lai
 
-
-stacked_rasters <- c(maxR2.pr, maxR2.tas, maxR2.rsds, maxR2.wind, maxR2.vsm, maxR2.lai)
-names(stacked_rasters) <- c("PR", "TAS", "RSDS", "Wind Speed", "VSM", "LAI")
+stacked_rasters <- c(maxR2.pr, maxR2.tas, maxR2.rh, maxR2.wind, maxR2.vsm)
+names(stacked_rasters) <- c("PR", "TAS", "RH", "Wind Speed", "VSM")
 
 # Apply a function to find the index of the max value for each cell
-highest_index <- app(stacked_rasters, which.max)
+highest_index <- app(stacked_rasters, which.max, na.rm = TRUE)
 
 # Set the levels to replace numeric values with the names of the rasters
-levels(highest_index) <- data.frame(id = 1:6, name = names(stacked_rasters))
+levels(highest_index) <- data.frame(id = 1:5, name = names(stacked_rasters))
 
 # Plot the result to visualize the highest value index for each cell
-plot(highest_index, main = "Met variables that dominate GFED anomaly variability")
+my.col <- c("#615140", "#c5d2e7", "#c99293", "#9da989", "#e6ddcc")
+plot(highest_index, main = "Met variables that dominate GFED anomaly variability", col = my.col)
 map("world2", add = TRUE, interior = FALSE)
+
+
+
+# Excluded Code Chunk
+
+# Set all zeros to NA
+# maxR2.pr[maxR2.pr==0] <- NA 
+# maxR2.tas[maxR2.tas==0] <- NA 
+# maxR2.rh[maxR2.rh==0] <- NA 
+# maxR2.wind[maxR2.wind==0] <- NA 
+# maxR2.vsm[maxR2.vsm==0] <- NA 
