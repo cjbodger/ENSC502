@@ -4,7 +4,6 @@ library(terra)
 library(climetrics)
 library(maps)
 library(vars)
-install.packages("rnaturalearthdata")
 library(rnaturalearth)
 
 
@@ -713,6 +712,7 @@ pie(freq_table$count,
 polar_north <- ext(0, 360, 66.5, 90)
 highest_polar_north <- crop(highest_index, polar_north)
 levels(highest_polar_north) <- data.frame(id = 1:5, name = names(stacked_rasters))
+plot(highest_polar_north)
 
 
 freq_table <- freq(highest_polar_north)
@@ -766,7 +766,7 @@ souam <- ext(270, 340, -60, 15)
 highest_souam <- crop(highest_index, souam)
 levels(highest_souam) <- data.frame(id = 1:5, name = names(stacked_rasters))
 plot(highest_souam)
-freq_table <- freq(highest_aus)
+freq_table <- freq(highest_souam)
 
 # Calculate percentages
 freq_table$percentage <- (freq_table$count / sum(freq_table$count)) * 100
@@ -783,7 +783,7 @@ noram <- ext(190, 320, 15, 80)
 highest_noram <- crop(highest_index, noram)
 levels(highest_noram) <- data.frame(id = 1:5, name = names(stacked_rasters))
 plot(highest_noram)
-freq_table <- freq(highest_aus)
+freq_table <- freq(highest_noram)
 
 # Calculate percentages
 freq_table$percentage <- (freq_table$count / sum(freq_table$count)) * 100
@@ -797,38 +797,40 @@ pie(freq_table$count,
 
 
 # Time Series Analysis
-BA_crop <- crop(BA, tropics)
+BA_crop <- crop(BA.anom.detrend, tropics)
 mean_BA <- global(BA_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_BA), main = "BA")
 BA.ts <- (ts(mean_BA))
 
-pr_crop <- crop(pr, tropics)
+pr_crop <- crop(pr.anom.detrend, tropics)
 mean_pr <- global(pr_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_pr), main = "PR")
 pr.ts <- (ts(mean_pr))
 
-rh_crop <- crop(rh, tropics)
+rh_crop <- crop(rh.anom.detrend, tropics)
 mean_rh <- global(rh_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_rh), main = "RH")
 rh.ts <- (ts(mean_rh))
 
-tas_crop <- crop(tas, tropics)
+tas_crop <- crop(tas.anom.detrend, tropics)
 mean_tas <- global(tas_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_tas), main = "TAS")
 tas.ts <- (ts(mean_tas))
 
-wind_crop <- crop(wind, tropics)
+wind_crop <- crop(wind.anom.detrend, tropics)
 mean_wind <- global(wind_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_wind), main = "WS")
 wind.ts <- (ts(mean_wind))
 
-vsm_crop <- crop(vsm, tropics)
+vsm_crop <- crop(vsm.anom.detrend, tropics)
 mean_vsm <- global(vsm_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_vsm), main = "VSM")
 vsm.ts <- (ts(mean_vsm))
 
 
 tsDat <- ts.union(BA.ts, pr.ts, tas.ts, rh.ts, wind.ts, vsm.ts)
+
+plot(x = BA.ts, y = tas.ts)
 
 
 # Time Series Graph
