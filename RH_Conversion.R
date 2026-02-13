@@ -6,18 +6,21 @@ library(climetrics)
 library(maps)
 library(vars)
 
-setwd("C:/Users/Charlotte/Desktop/RStudio")
+setwd("C:/Users/Charlotte/Documents/ENSC502")
 
-T <- terra::rast("C:/Users/Charlotte/Desktop/RStudio/ERA5_tas_C.nc")
-Td <- terra::rast("C:/Users/Charlotte/Desktop/RStudio/ERA5_dewpoint_C.nc")
+T <- terra::rast("C:/Users/Charlotte/Documents/ENSC502/F2MT_2001_2022_K.nc")
+Td <- terra::rast("C:/Users/Charlotte/Documents/ENSC502/FDPT_2001_2022_K.nc")
 
-numer <- exp((17.625*Td)/(243.04+Td))
-denom <- exp((17.625*T)/(243.04+T))
+Tc <- T - 273.15
+Tdc <- Td - 273.15
+
+numer <- exp((17.625*Tdc)/(243.04+Tdc))
+denom <- exp((17.625*Tc)/(243.04+Tc))
 RH <- 100 * (numer/denom)
 print(RH)
 
 writeCDF(RH,
-         "ERA5_rh.nc",
+         "FRH_2001_2022.nc",
          varname = "RH",
          varunit = "%",
          longname = "Relative Humidity",
