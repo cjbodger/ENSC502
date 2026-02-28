@@ -5,12 +5,16 @@ library(climetrics)
 library(maps)
 library(vars)
 library(rnaturalearth)
+library(ggplot2)
 
 
 # Area Burned (ESA FIRE CCI)
-data <- terra::rast("C:/Users/Charlotte/Desktop/RStudio/FB_2001_2019.nc")
+
+data <- terra::rast("C:/Users/Charlotte/Desktop/RStudio/FB2_2001_2022.nc")
 crs(data) <- "EPSG:4326"
 BA <- data
+BA <- data / 1000000
+
 mask <- mean(BA) # create mask
 mask <- mask - mask + 1
 rm(data)
@@ -100,7 +104,7 @@ detrend.fun <- function(x) {
 data.anom.detrend <- app(x = data.anom, fun = detrend.fun)
 pr.anom.detrend <- data.anom.detrend
 my.col <- rev(map.pal("magma", n = 100))
-plot(subset(pr.anom.detrend, 1:1), col = my.col, main ="pr")
+plot(subset(pr.anom.detrend, 1:1), col = my.col, main ="PR Anomalies (2001-2019)")
 
 
 # Repetition for TAS
@@ -116,8 +120,10 @@ data.clim <- rep(data.12, n)
 data.anom <- data - data.clim
 data.anom.detrend <- app(x = data.anom, fun = detrend.fun)
 tas.anom.detrend <- data.anom.detrend
-my.col <- rev(map.pal("magma", n = 100))
-plot(subset(tas.anom.detrend, 1:1), col = my.col, main = "tas")
+my.col <- rev(map.pal("differences", n = 100))
+plot(subset(tas.anom.detrend, 1:1), col = my.col, main = "TAS Anomalies (2001-2019)")
+map("world2", add = TRUE, interior = FALSE)
+
 
 tas.sum <- sum(tas)
 my.col <- rev(map.pal("inferno", n = 100))
@@ -136,8 +142,9 @@ data.clim <- rep(data.12, n)
 data.anom <- data - data.clim
 data.anom.detrend <- app(x = data.anom, fun = detrend.fun)
 rh.anom.detrend <- data.anom.detrend
-my.col <- rev(map.pal("magma", n = 100))
-plot(subset(rh.anom.detrend, 1:1), col = my.col, main = "RH")
+my.col <- rev(map.pal("differences", n = 100))
+plot(subset(rh.anom.detrend, 1:1), col = my.col, main = "RH Anomalies (2001-2019)")
+map("world2", add = TRUE, interior = FALSE)
 
 
 # Repetition for BA
@@ -161,7 +168,7 @@ data.anom <- data - data.clim
 data.anom.detrend <- app(x = data.anom, fun = detrend.fun)
 BA.anom.detrend <- data.anom.detrend
 my.col <- rev(map.pal("inferno", n = 40))
-plot(subset(BA.anom.detrend, 1), col = my.col, main = "BA")
+plot(subset(BA.anom.detrend, 1:1), col = my.col, main = "BA Anomalies (2001-2019)")
 
 
 # Rep for wind
@@ -178,7 +185,7 @@ data.anom <- data - data.clim
 data.anom.detrend <- app(x = data.anom, fun = detrend.fun)
 wind.anom.detrend <- data.anom.detrend
 my.col <- rev(map.pal("magma", n = 100))
-plot(subset(wind.anom.detrend, 1), col = my.col, main = "wind speed")
+plot(subset(wind.anom.detrend, 1), col = my.col, main = "Wind Speed Anomalies (2001-2019)")
 
 
 # Rep for VSM
@@ -194,8 +201,9 @@ data.clim <- rep(data.12, n)
 data.anom <- data - data.clim
 data.anom.detrend <- app(x = data.anom, fun = detrend.fun)
 vsm.anom.detrend <- data.anom.detrend
-my.col <- rev(map.pal("magma", n = 100))
-plot(subset(vsm.anom.detrend, 1), col = my.col, main = "volumetric soil moisture layer 1")
+my.col <- rev(map.pal("differences", n = 100))
+plot(subset(vsm.anom.detrend, 1), col = my.col, main = "VSM Anomalies (2001-2019)")
+map("world2", add = TRUE, interior = FALSE)
 
 
 granger.fun.3 <- function(x) {
@@ -287,14 +295,32 @@ my.col <- c("#fff","#D8DE27", "#f89540", "#cc4778", "#7e03a8", "#0d0887")
 plot(p.value, main = "PR, TAS, RH, WS, VSM Granger-causes Burned Area Anomalies", col = my.col)
 map("world2", add = TRUE, interior = FALSE)
 
+
+# Grid Cells WITH a Granger Causality.
+p.value.mask <- classify(p.value, cbind(0, NA))
+p.value.mask <- ifel(is.na(p.value.mask), NA, 1)
+
+
+# Removing All Cells without GC
+
+BA.anom.detrend.m <- BA.anom.detrend * p.value.mask
+pr.anom.detrend.m <- pr.anom.detrend * p.value.mask
+tas.anom.detrend.m <- tas.anom.detrend * p.value.mask
+rh.anom.detrend.m <- rh.anom.detrend * p.value.mask
+wind.anom.detrend.m <- wind.anom.detrend * p.value.mask
+vsm.anom.detrend.m <- vsm.anom.detrend * p.value.mask
+
+
+
 # Cross Correlation
-lon <- 35
-lat <- 0
+lon <- 135
+lat <- -22
 coords <- matrix(c(lon, lat), ncol = 2, byrow = TRUE)
 location <- vect(coords, type = "points")
 
-plot(p.value, col = my.col)
-map("world2", add = TRUE, interior = TRUE)
+p.value.non <- classify(p.value, cbind(0, NA))
+plot(p.value.non, col = my.col)
+map("world2", add = TRUE, interior = FALSE)
 points(location, col = "black", pch = 1, cex = 2, lwd = 3)
 
 my.col <- rev(map.pal("inferno", n = 100))
@@ -302,12 +328,12 @@ plot(BA.sum, col = my.col, main = "Total Area Burned from 2001 - 2019")
 map("world2", add = TRUE)
 points(location, col = "black", pch = 1, cex = 2, lwd = 3)
 
-BA.anom.detrend.gc <- extract(BA.anom.detrend, location)
-pr.anom.detrend.gc <- extract(pr.anom.detrend, location)
-tas.anom.detrend.gc <- extract(tas.anom.detrend, location)
-rh.anom.detrend.gc <- extract(rh.anom.detrend, location)
-wind.anom.detrend.gc <- extract(wind.anom.detrend, location)
-vsm.anom.detrend.gc <- extract(vsm.anom.detrend, location)
+BA.anom.detrend.gc <- extract(BA.anom.detrend.m, location)
+pr.anom.detrend.gc <- extract(pr.anom.detrend.m, location)
+tas.anom.detrend.gc <- extract(tas.anom.detrend.m, location)
+rh.anom.detrend.gc <- extract(rh.anom.detrend.m, location)
+wind.anom.detrend.gc <- extract(wind.anom.detrend.m, location)
+vsm.anom.detrend.gc <- extract(vsm.anom.detrend.m, location)
 
 BA.anom.detrend.gc <- unlist(unname(as.vector(BA.anom.detrend.gc)))
 pr.anom.detrend.gc <- unlist(unname(as.vector(pr.anom.detrend.gc)))
@@ -450,7 +476,7 @@ findMaxCorr.fun <- function(x) {
   }
 }
 
-data <- c(BA.anom.detrend, pr.anom.detrend)
+data <- c(BA.anom.detrend.m, pr.anom.detrend.m)
 timeLags <- app(x = data, fun = findLag.fun)
 timeLags.pr <- timeLags
 maxCorr <- app(x = data, fun = findMaxCorr.fun)
@@ -485,7 +511,7 @@ map("world2", add = TRUE, interior = FALSE)
 points(location, pch = 1, cex = 2, lwd = 2)
 
 # Repeat for TAS
-data <- c(tas.anom.detrend, BA.anom.detrend)
+data <- c(BA.anom.detrend.m, tas.anom.detrend.m)
 timeLags <- app(x = data, fun = findLag.fun)
 timeLags.tas <- timeLags
 maxCorr <- app(x = data, fun = findMaxCorr.fun)
@@ -520,7 +546,7 @@ map("world2", add = TRUE, interior = FALSE)
 points(location, pch = 1, cex = 2, lwd = 2)
 
 # Repeat for RH
-data <- c(BA.anom.detrend, rh.anom.detrend)
+data <- c(BA.anom.detrend.m, rh.anom.detrend.m)
 timeLags <- app(x = data, fun = findLag.fun)
 timeLags.rh <- timeLags
 maxCorr <- app(x = data, fun = findMaxCorr.fun)
@@ -557,7 +583,7 @@ map("world2", add = TRUE, interior = FALSE)
 points(location, pch = 1, cex = 2, lwd = 2)
 
 # Repeat for Wind Speed
-data <- c(BA.anom.detrend, wind.anom.detrend)
+data <- c(BA.anom.detrend.m, wind.anom.detrend.m)
 timeLags <- app(x = data, fun = findLag.fun)
 timeLags.wind <- timeLags
 maxCorr <- app(x = data, fun = findMaxCorr.fun)
@@ -594,7 +620,7 @@ map("world2", add = TRUE, interior = FALSE)
 points(location, pch = 1, cex = 2, lwd = 2)
 
 # Repeat for VSM
-data <- c(BA.anom.detrend, vsm.anom.detrend)
+data <- c(BA.anom.detrend.m, vsm.anom.detrend.m)
 timeLags <- app(x = data, fun = findLag.fun)
 timeLags.vsm <- timeLags
 maxCorr <- app(x = data, fun = findMaxCorr.fun)
@@ -796,73 +822,75 @@ pie(freq_table$count,
     cex = 0.8)
 
 
-# Time Series Analysis
-BA_crop <- crop(BA.anom.detrend, tropics)
+# Time Series Analysis (Exclusion of Non-GC Grid Cells)
+BA_crop <- crop(BA.anom.detrend.m, tropics)
 mean_BA <- global(BA_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_BA), main = "BA")
 BA.ts <- (ts(mean_BA))
 
-pr_crop <- crop(pr.anom.detrend, tropics)
+pr_crop <- crop(pr.anom.detrend.m, tropics)
 mean_pr <- global(pr_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_pr), main = "PR")
 pr.ts <- (ts(mean_pr))
 
-rh_crop <- crop(rh.anom.detrend, tropics)
+rh_crop <- crop(rh.anom.detrend.m, tropics)
 mean_rh <- global(rh_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_rh), main = "RH")
 rh.ts <- (ts(mean_rh))
 
-tas_crop <- crop(tas.anom.detrend, tropics)
+tas_crop <- crop(tas.anom.detrend.m, tropics)
 mean_tas <- global(tas_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_tas), main = "TAS")
 tas.ts <- (ts(mean_tas))
 
-wind_crop <- crop(wind.anom.detrend, tropics)
+wind_crop <- crop(wind.anom.detrend.m, tropics)
 mean_wind <- global(wind_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_wind), main = "WS")
 wind.ts <- (ts(mean_wind))
 
-vsm_crop <- crop(vsm.anom.detrend, tropics)
+vsm_crop <- crop(vsm.anom.detrend.m, tropics)
 mean_vsm <- global(vsm_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_vsm), main = "VSM")
 vsm.ts <- (ts(mean_vsm))
 
-
 tsDat <- ts.union(BA.ts, pr.ts, tas.ts, rh.ts, wind.ts, vsm.ts)
 
 plot(x = BA.ts, y = tas.ts)
-
+plot(x = BA.ts, y = pr.ts)
+plot(x = BA.ts, y = rh.ts)
+plot(x = BA.ts, y = wind.ts)
+plot(x = BA.ts, y = vsm.ts)
 
 # Time Series Graph
 plot(tsDat, main = "Time Series (Mean) for Tropics")
 
 # For Temp N
-BA_crop <- crop(BA, temperate_north)
+BA_crop <- crop(BA.anom.detrend.m, temperate_north)
 mean_BA <- global(BA_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_BA), main = "BA")
 BA.ts <- (ts(mean_BA))
 
-pr_crop <- crop(pr, temperate_north)
+pr_crop <- crop(pr.anom.detrend.m, temperate_north)
 mean_pr <- global(pr_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_pr), main = "PR")
 pr.ts <- (ts(mean_pr))
 
-rh_crop <- crop(rh, temperate_north)
+rh_crop <- crop(rh.anom.detrend.m, temperate_north)
 mean_rh <- global(rh_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_rh), main = "RH")
 rh.ts <- (ts(mean_rh))
 
-tas_crop <- crop(tas, temperate_north)
+tas_crop <- crop(tas.anom.detrend.m, temperate_north)
 mean_tas <- global(tas_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_tas), main = "TAS")
 tas.ts <- (ts(mean_tas))
 
-wind_crop <- crop(wind, temperate_north)
+wind_crop <- crop(wind.anom.detrend.m, temperate_north)
 mean_wind <- global(wind_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_wind), main = "WS")
 wind.ts <- (ts(mean_wind))
 
-vsm_crop <- crop(vsm, temperate_north)
+vsm_crop <- crop(vsm.anom.detrend.m, temperate_north)
 mean_vsm <- global(vsm_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_vsm), main = "VSM")
 vsm.ts <- (ts(mean_vsm))
@@ -875,32 +903,32 @@ plot(tsDat, main = "Time Series (Mean) for Temperate North")
 
 
 # Polar North
-BA_crop <- crop(BA, polar_north)
+BA_crop <- crop(BA.anom.detrend.m, polar_north)
 mean_BA <- global(BA_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_BA), main = "BA")
 BA.ts <- (ts(mean_BA))
 
-pr_crop <- crop(pr, polar_north)
+pr_crop <- crop(pr.anom.detrend.m, polar_north)
 mean_pr <- global(pr_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_pr), main = "PR")
 pr.ts <- (ts(mean_pr))
 
-rh_crop <- crop(rh, polar_north)
+rh_crop <- crop(rh.anom.detrend.m, polar_north)
 mean_rh <- global(rh_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_rh), main = "RH")
 rh.ts <- (ts(mean_rh))
 
-tas_crop <- crop(tas, polar_north)
+tas_crop <- crop(tas.anom.detrend.m, polar_north)
 mean_tas <- global(tas_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_tas), main = "TAS")
 tas.ts <- (ts(mean_tas))
 
-wind_crop <- crop(wind, polar_north)
+wind_crop <- crop(wind.anom.detrend.m, polar_north)
 mean_wind <- global(wind_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_wind), main = "WS")
 wind.ts <- (ts(mean_wind))
 
-vsm_crop <- crop(vsm, polar_north)
+vsm_crop <- crop(vsm.anom.detrend.m, polar_north)
 mean_vsm <- global(vsm_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_vsm), main = "VSM")
 vsm.ts <- (ts(mean_vsm))
@@ -912,114 +940,39 @@ tsDat <- ts.union(BA.ts, pr.ts, tas.ts, rh.ts, wind.ts, vsm.ts)
 plot(tsDat, main = "Time Series (Mean) for Polar North")
 
 # Temp South
-BA_crop <- crop(BA, temperate_south)
+BA_crop <- crop(BA.anom.detrend.m, temperate_south)
 mean_BA <- global(BA_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_BA), main = "BA")
 BA.ts <- (ts(mean_BA))
 
-pr_crop <- crop(pr, temperate_south)
+pr_crop <- crop(pr.anom.detrend.m, temperate_south)
 mean_pr <- global(pr_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_pr), main = "PR")
 pr.ts <- (ts(mean_pr))
 
-rh_crop <- crop(rh, temperate_south)
+rh_crop <- crop(rh.anom.detrend.m, temperate_south)
 mean_rh <- global(rh_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_rh), main = "RH")
 rh.ts <- (ts(mean_rh))
 
-tas_crop <- crop(tas, temperate_south)
+tas_crop <- crop(tas.anom.detrend.m, temperate_south)
 mean_tas <- global(tas_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_tas), main = "TAS")
 tas.ts <- (ts(mean_tas))
 
-wind_crop <- crop(wind, temperate_south)
+wind_crop <- crop(wind.anom.detrend.m, temperate_south)
 mean_wind <- global(wind_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_wind), main = "WS")
 wind.ts <- (ts(mean_wind))
 
-vsm_crop <- crop(vsm, temperate_south)
+vsm_crop <- crop(vsm.anom.detrend.m, temperate_south)
 mean_vsm <- global(vsm_crop, fun = "mean", na.rm = TRUE)
 plot(ts(mean_vsm), main = "VSM")
 vsm.ts <- (ts(mean_vsm))
 
 
 tsDat <- ts.union(BA.ts, pr.ts, tas.ts, rh.ts, wind.ts, vsm.ts)
+
 
 # Time Series Graph
 plot(tsDat, main = "Time Series (Mean) for Temperate South")
-
-
-# Australia
-BA_crop <- crop(BA, aust)
-mean_BA <- global(BA_crop, fun = "mean", na.rm = TRUE)
-plot(ts(mean_BA), main = "BA")
-BA.ts <- (ts(mean_BA))
-
-pr_crop <- crop(pr, aust)
-mean_pr <- global(pr_crop, fun = "mean", na.rm = TRUE)
-plot(ts(mean_pr), main = "PR")
-pr.ts <- (ts(mean_pr))
-
-rh_crop <- crop(rh, aust)
-mean_rh <- global(rh_crop, fun = "mean", na.rm = TRUE)
-plot(ts(mean_rh), main = "RH")
-rh.ts <- (ts(mean_rh))
-
-tas_crop <- crop(tas, aust)
-mean_tas <- global(tas_crop, fun = "mean", na.rm = TRUE)
-plot(ts(mean_tas), main = "TAS")
-tas.ts <- (ts(mean_tas))
-
-wind_crop <- crop(wind, aust)
-mean_wind <- global(wind_crop, fun = "mean", na.rm = TRUE)
-plot(ts(mean_wind), main = "WS")
-wind.ts <- (ts(mean_wind))
-
-vsm_crop <- crop(vsm, aust)
-mean_vsm <- global(vsm_crop, fun = "mean", na.rm = TRUE)
-plot(ts(mean_vsm), main = "VSM")
-vsm.ts <- (ts(mean_vsm))
-
-
-tsDat <- ts.union(BA.ts, pr.ts, tas.ts, rh.ts, wind.ts, vsm.ts)
-
-# Time Series Graph
-plot(tsDat, main = "Time Series (Mean) for Australia")
-
-
-# South America
-BA_crop <- crop(BA, souam)
-mean_BA <- global(BA_crop, fun = "mean", na.rm = TRUE)
-plot(ts(mean_BA), main = "BA")
-BA.ts <- (ts(mean_BA))
-
-pr_crop <- crop(pr, souam)
-mean_pr <- global(pr_crop, fun = "mean", na.rm = TRUE)
-plot(ts(mean_pr), main = "PR")
-pr.ts <- (ts(mean_pr))
-
-rh_crop <- crop(rh, souam)
-mean_rh <- global(rh_crop, fun = "mean", na.rm = TRUE)
-plot(ts(mean_rh), main = "RH")
-rh.ts <- (ts(mean_rh))
-
-tas_crop <- crop(tas, souam)
-mean_tas <- global(tas_crop, fun = "mean", na.rm = TRUE)
-plot(ts(mean_tas), main = "TAS")
-tas.ts <- (ts(mean_tas))
-
-wind_crop <- crop(wind, souam)
-mean_wind <- global(wind_crop, fun = "mean", na.rm = TRUE)
-plot(ts(mean_wind), main = "WS")
-wind.ts <- (ts(mean_wind))
-
-vsm_crop <- crop(vsm, souam)
-mean_vsm <- global(vsm_crop, fun = "mean", na.rm = TRUE)
-plot(ts(mean_vsm), main = "VSM")
-vsm.ts <- (ts(mean_vsm))
-
-
-tsDat <- ts.union(BA.ts, pr.ts, tas.ts, rh.ts, wind.ts, vsm.ts)
-
-# Time Series Graph
-plot(tsDat, main = "Time Series (Mean) for South America")
